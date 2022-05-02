@@ -11,6 +11,8 @@ from bs4 import BeautifulSoup
 
 import os
 from dotenv import load_dotenv
+import logging
+from http import HTTPStatus
 
 load_dotenv()
 
@@ -21,7 +23,7 @@ URL_YANDEX_IMAGE = 'https://yandex.ru/images/search?source=collections' \
 THUMBSNAP_API_KEY = os.getenv('THUMBSNAP_API_KEY')  # https://thumbsnap.com/api
 THUMBSNAP_URL = 'https://thumbsnap.com/api/upload'
 
-COUNT_OUTPUT_IMAGES = 3
+COUNT_OUTPUT_IMAGES = 5
 TEST_URL_IMAGE = 'https://teatrzoo.ru/wp-content/uploads/2019/10' \
                  '/kak-krichat-lebedi_39.jpg'
 
@@ -52,7 +54,7 @@ def get_new_image():
 def new_image(update, context):
     chat = update.effective_chat
     for i in get_yandex_inf(TEST_URL_IMAGE):
-        # print(i)
+        print(i)
         context.bot.send_photo(chat.id, i)
 
 
@@ -74,11 +76,16 @@ def get_yandex_inf(url_image):
     soup = BeautifulSoup(requests.get(url).text, 'lxml')
     similar = soup.find_all('div', class_='CbirSimilar-Thumb')
     all_string = []
+    count_output_images = COUNT_OUTPUT_IMAGES
 
     for i in similar:
         str_ish = f"{i.find('a').get('href')}\n"
         str_edit = change_str_to_url(str_ish)
-        all_string.append(str_edit)
+        if check_url_status(str_edit):
+            all_string.append(str_edit)
+            count_output_images = count_output_images - 1
+        if count_output_images <= 0:
+            break
 
     return all_string
 
@@ -89,7 +96,28 @@ def change_str_to_url(string: str):
     begin_index = new_string.find('img_url') + 8
     newest_string = new_string[begin_index:]
     parsed_string = urllib.parse.unquote_plus(newest_string)
+    print(parsed_string)
+    if '?' in parsed_string:
+        index_of_question_mark = parsed_string.find('?')
+        parsed_string = parsed_string[:index_of_question_mark]
+        print(f'Знак вопроса вот отсюда')
+        print(parsed_string)
+    #check_url_status(parsed_string)
     return parsed_string
+
+def check_url_status(url):
+    try:
+        response = requests.get(url)
+    except Exception as error:
+        logging.error(f'Неполадки с запросом к url картинки. Ошибка: {error}')
+        return False
+    if response.status_code != HTTPStatus.OK:
+        wrong_status_code = response.status_code
+        logging.error(f'Страница {url} вернула ошибку {wrong_status_code}')
+        return False
+    else:
+        print('Вернул урл из check_url_status')
+        return True
 
 
 def push_image_web():
