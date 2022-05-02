@@ -23,7 +23,7 @@ URL_YANDEX_IMAGE = 'https://yandex.ru/images/search?source=collections' \
 THUMBSNAP_API_KEY = os.getenv('THUMBSNAP_API_KEY')  # https://thumbsnap.com/api
 THUMBSNAP_URL = 'https://thumbsnap.com/api/upload'
 
-COUNT_OUTPUT_IMAGES = 5
+COUNT_OUTPUT_IMAGES = 4
 TEST_URL_IMAGE = 'https://teatrzoo.ru/wp-content/uploads/2019/10' \
                  '/kak-krichat-lebedi_39.jpg'
 
@@ -44,7 +44,11 @@ def get_new_text():
 def new_text(update, context):
     chat = update.effective_chat
     text = update.message.text
-    context.bot.send_message(chat.id, f'Был отправлен текст {text}')
+    if 'http' in text:
+        new_image(update, context)
+        #print(context)
+    else:
+        context.bot.send_message(chat.id, f'Был отправлен текст {text}')
 
 
 def get_new_image():
@@ -53,9 +57,20 @@ def get_new_image():
 
 def new_image(update, context):
     chat = update.effective_chat
-    for i in get_yandex_inf(TEST_URL_IMAGE):
-        print(i)
-        context.bot.send_photo(chat.id, i)
+    print(f'Просто Апдейт в new_image {update}')
+    print(f'Апдейт текст в new_image {update.message.text}')
+    if update.message.photo:
+        for i in get_yandex_inf(TEST_URL_IMAGE):
+            #print(i)
+            context.bot.send_photo(chat.id, i)
+    elif update.message.text:
+        for i in get_yandex_inf(update.message.text):
+            #print(f'Ссылка внутри текста с текстом {update.message.text}')
+            context.bot.send_photo(chat.id, i)
+            #print('Типо вывели сообщение в телегу')
+    else:
+        print('Вышли где то не там')
+
 
 
 def wake_up(update, context):
